@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="ARM64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Dimmer/Dimmer.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Dimmer.Tests/Dimmer.Tests.csproj">
+      <Platform Project="Any CPU" />
+    </Project>
+  </Folder>
+</Solution>

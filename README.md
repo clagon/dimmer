@@ -1,0 +1,32 @@
+# Dimmer
+
+タスクバーに常駐し、モニターの明るさ・入力ソースなどを操作する Windows アプリ。用語は [CONTEXT.md](CONTEXT.md) を参照。
+
+## 開発
+
+### 必要なもの
+
+- Windows 10 1809 以降 / Windows 11
+- .NET 10 SDK（`winget install Microsoft.DotNet.SDK.10`）
+- 開発者モード（設定 → システム → 開発者向け）。署名なしのパッケージを登録するために必要
+
+### WSL からのビルドと実行
+
+リポジトリは Windows 側のパス（例: `C:\src\display-ctrler` = `/mnt/c/src/display-ctrler`）に置く。WSL 側のパスでは MSIX のビルドが不安定になる。
+
+```bash
+# ビルド
+dotnet.exe build Dimmer.slnx
+
+# テスト
+dotnet.exe test Dimmer.slnx
+
+# パッケージを登録して起動（ビルドのたびに登録し直す）
+powershell.exe -NoProfile -Command "Add-AppxPackage -Register 'C:\src\display-ctrler\src\Dimmer\bin\Debug\net10.0-windows10.0.19041.0\win-x64\AppxManifest.xml' -ForceApplicationShutdown"
+explorer.exe 'shell:AppsFolder\Dimmer_qwz61hn511ep6!App'
+
+# 登録を解除
+powershell.exe -NoProfile -Command "Get-AppxPackage Dimmer | Remove-AppxPackage"
+```
+
+ARM64 向けには `-p:Platform=ARM64` を付けてビルドし、`win-arm64` 側の `AppxManifest.xml` を登録する。
