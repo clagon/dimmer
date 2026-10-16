@@ -1,4 +1,4 @@
-# display-ctrler
+# Dimmer
 
 タスクバーに常駐し、Windows に接続されたモニターの設定（明るさ・入力ソースなど）を操作するアプリ。保存した設定の組み合わせをショートカットで一発適用できる。
 
@@ -7,11 +7,15 @@
 ### モニターと設定
 
 **Monitor**:
-設定を操作できる 1 台の表示装置。外部モニターも内蔵パネルも含む。
+Windows に接続された 1 台の表示装置。外部モニターも内蔵パネルも含み、Setting を操作できないもの（DDC/CI 非対応など）も含む。
 _Avoid_: Display, 画面
 
+**Monitor Name**:
+ユーザーが Monitor に付ける呼び名。未設定なら型番名（同型が複数あれば番号付き）で代用される。
+_Avoid_: Alias, Label, ニックネーム
+
 **Setting**:
-Monitor が持つ操作可能な 1 項目（明るさ・コントラスト・音量・入力ソース・Orientation・色温度・電源状態）。
+Monitor が持つ操作可能な 1 項目（明るさ・コントラスト・音量・入力ソース・Orientation・色温度・電源状態）。明るさ・コントラスト・音量は 0〜100% で表し、それ以外は選択肢から選ぶ。
 _Avoid_: Control, パラメータ
 
 **Orientation**:
@@ -29,7 +33,7 @@ Profile に含まれる指定を実際の Monitor に反映すること。見つ
 _Avoid_: Load, 切り替え
 
 **Profile Cycle**:
-順序付きの Profile の並び。Shortcut を押すたびに、直近に Apply された Profile の次を Apply する（末尾の次は先頭、並びに無ければ先頭）。
+名前付きの、2 つ以上の Profile を重複なく並べたもの。Shortcut を押すたびに、直近に Apply された Profile の次を Apply する（末尾の次は先頭、並びに無ければ先頭）。
 _Avoid_: Rotation, Toggle, ローテ
 
 **Adjustment**:
