@@ -83,4 +83,17 @@ public sealed class SettingsFileTests : IDisposable
         file.Save();
         Assert.Equal(json, File.ReadAllText(PathOf));
     }
+
+    [Fact]
+    public void 他のプロセスが開いたままで読めなければ空の設定で起動し_保存もしない()
+    {
+        File.WriteAllText(PathOf, """{ "profiles": [] }""");
+        var file = new SettingsFile(PathOf);
+        using (new FileStream(PathOf, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.NotNull(file.Load());
+            Assert.False(file.Save());
+        }
+        Assert.Equal("""{ "profiles": [] }""", File.ReadAllText(PathOf));
+    }
 }

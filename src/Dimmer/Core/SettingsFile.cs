@@ -22,8 +22,9 @@ public sealed class SettingsFile(string path)
             Settings = IsComplete(settings) ? settings! : throw new JsonException("必須の項目が null です");
             return null;
         }
-        catch (JsonException e)
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
         {
+            // 壊れている・他のプロセスが開いたままで読めない、のどちらでも空の設定で起動し、元のファイルは残す
             _broken = true;
             Settings = new AppSettings();
             return e.Message;
@@ -37,12 +38,21 @@ public sealed class SettingsFile(string path)
         && s.MonitorNames.Values.All(v => v is not null);
 
     /// <summary>保存する。読み込んだファイルが壊れていた場合は、元のファイルを残すため何もしない。</summary>
-    public void Save()
+    /// <returns>書き込めたか（他のプロセスが開いたままなどで書き込めなければ false。次の保存で書き込む）</returns>
+    public bool Save()
     {
-        if (_broken) return;
-        // 書きかけで落ちても壊れないよう、一時ファイルに書いてから置き換える
-        var temp = path + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(Settings, AppSettings.Json));
-        File.Move(temp, path, overwrite: true);
+        if (_broken) return false;
+        try
+        {
+            // 書きかけで落ちても壊れないよう、一時ファイルに書いてから置き換える
+            var temp = path + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(Settings, AppSettings.Json));
+            File.Move(temp, path, overwrite: true);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 }
