@@ -34,10 +34,8 @@ public sealed class AdjustmentRunner(
     public void Press(Adjustment adjustment)
     {
         _session?.Release();
-        // 前のセッションの読み書きが終わってから現在値を読む（続けて押したとき、同じ現在値から増減しないように）
-        var previous = _session?.Completion ?? Task.CompletedTask;
         _session = new Session(this, adjustment);
-        _session.Completion = _session.StartAsync(previous);
+        _ = _session.StartAsync();
     }
 
     public void Release(Adjustment adjustment)
@@ -69,19 +67,15 @@ public sealed class AdjustmentRunner(
 
         public Adjustment Adjustment => adjustment;
 
-        /// <summary>このセッションの読み書きがすべて終わったら完了する。</summary>
-        public Task Completion { get; set; } = Task.CompletedTask;
-
-        public async Task StartAsync(Task previous)
+        public async Task StartAsync()
         {
             var lease = runner._monitors.Lease();
             var gated = false;
             try
             {
                 await runner._monitors.Ready;
-                try { await previous; }
-                catch (Exception e) { Log.Write($"Previous adjustment failed: {e.Message}"); }
-                // 現在値を読んでから書き込みが終わるまで、Profile の Apply と順番を守る
+                // 現在値を読んでから書き込みが終わるまでを 1 つの操作として、Profile の Apply や前の Adjustment と
+                // 押された順に並ぶ（続けて押したときも、前の操作の書き込みの後の現在値から増減する）
                 await runner._gate.WaitAsync();
                 gated = true;
                 var (selected, shown) = Resolve();
