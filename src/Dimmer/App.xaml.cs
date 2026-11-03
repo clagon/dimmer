@@ -46,7 +46,8 @@ public partial class App : Application
         Monitors.Changed += () =>
         {
             foreach (var m in Monitors.Monitors)
-                Log.Write($"Monitor: {m.DisplayName} key={m.Key} internal={m.IsInternal} gdi={m.GdiDeviceName} controllable={m.IsControllable}");
+                Log.Write($"Monitor: {m.DisplayName} key={m.Key} internal={m.IsInternal} gdi={m.GdiDeviceName} controllable={m.IsControllable} " +
+                    $"settings=[{string.Join(", ", m.Settings.Select(s => s.Value.Count == 0 ? $"{s.Key}" : $"{s.Key}({string.Join("/", s.Value.Select(v => Core.Vcp.ValueName(s.Key, v)))})"))}]");
         };
         Task.Run(Monitors.Refresh);
     }

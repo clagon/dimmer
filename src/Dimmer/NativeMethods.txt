@@ -15,3 +15,9 @@ CreateWindowEx
 DefWindowProc
 DestroyWindow
 WM_DISPLAYCHANGE
+CapabilitiesRequestAndCapabilitiesReply
+GetVCPFeatureAndVCPFeatureReply
+SetVCPFeature
+EnumDisplaySettings
+ChangeDisplaySettingsEx
+DEVMODEW

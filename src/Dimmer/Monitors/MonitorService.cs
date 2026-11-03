@@ -80,7 +80,8 @@ public sealed class MonitorService : IDisposable
         var used = new Dictionary<string, int>();
         var panelIds = new Lazy<List<ManagementBaseObject>>(() => Wmi("SELECT * FROM WmiMonitorID"));
         var brightness = new Lazy<List<ManagementBaseObject>>(() => Wmi("SELECT InstanceName FROM WmiMonitorBrightness"));
-        var monitors = new List<Monitor>();
+        // capabilities は 1 台ずつ順に読む。並行して読むと取りこぼすことがあった（NVIDIA + DELL 2 台で確認）
+        var pending = new List<Func<Monitor>>();
 
         foreach (var path in ActivePaths())
         {
@@ -98,41 +99,42 @@ public sealed class MonitorService : IDisposable
                 if (i < handles.Count) { physical = handles[i]; handles[i] = 0; }
             }
 
-            EdidInfo? edid;
-            bool controllable;
             if (isInternal)
             {
-                // 内蔵パネルは WMI で特定し、明るさを WMI で操作できるかで操作可否を決める
+                // 内蔵パネルは WMI で特定し、明るさだけを WMI で操作する
                 var wmi = panelIds.Value.FirstOrDefault(o => IsInstance(o, instanceId));
-                edid = wmi is null ? ReadEdid(instanceId) : EdidFromWmi(wmi);
-                controllable = brightness.Value.Any(o => IsInstance(o, instanceId));
+                var edid = wmi is null ? ReadEdid(instanceId) : EdidFromWmi(wmi);
+                var controllable = brightness.Value.Any(o => IsInstance(o, instanceId));
+                var settings = new Dictionary<Setting, IReadOnlyList<int>>();
+                if (controllable) settings[Setting.Brightness] = [];
+                pending.Add(() => Create(edid, devicePath, friendlyName, true, gdiName, instanceId, physical, controllable, settings));
             }
             else
             {
-                edid = ReadEdid(instanceId);
-                controllable = physical != 0 && RespondsToDdcCi(physical);
+                var edid = ReadEdid(instanceId);
+                pending.Add(() =>
+                {
+                    var caps = physical == 0 ? null : MonitorSettings.ReadCapabilities(physical);
+                    var settings = caps is null ? [] : Capabilities.SupportedSettings(Capabilities.ParseVcp(caps));
+                    return Create(edid, devicePath, friendlyName, false, gdiName, instanceId, physical, caps is not null, settings);
+                });
             }
-
-            var model = edid?.ModelName ?? (friendlyName.Length > 0 ? friendlyName : instanceId);
-            monitors.Add(new Monitor(MonitorIdentity.Key(edid, devicePath), model, model, isInternal, gdiName, instanceId, physical, controllable));
         }
+
+        var monitors = pending.Select(f => f()).ToList();
 
         // 割り当てなかった物理モニターハンドルは閉じる
         foreach (var h in physicalByGdi.Values.SelectMany(x => x)) DestroyPhysicalMonitor(h);
         return monitors;
     }
 
-    /// <summary>DDC/CI に応答するか。capabilities 文字列の長さを問い合わせて確かめる。</summary>
-    private static unsafe bool RespondsToDdcCi(nint physical)
+    private static Monitor Create(EdidInfo? edid, string devicePath, string friendlyName, bool isInternal, string gdiName,
+        string instanceId, nint physical, bool controllable, Dictionary<Setting, IReadOnlyList<int>> settings)
     {
-        // DDC/CI はモニターが忙しいと取りこぼすことがあるので、少し間を空けて 3 回まで試す
-        for (var attempt = 0; attempt < 3; attempt++)
-        {
-            if (attempt > 0) Thread.Sleep(100);
-            uint length;
-            if (PInvoke.GetCapabilitiesStringLength(new HANDLE(physical), &length) != 0) return true;
-        }
-        return false;
+        // Orientation は DDC/CI ではなく Windows の表示設定で変えるので、どの Monitor でも操作できる
+        settings[Setting.Orientation] = SettingExtensions.Orientations;
+        var model = edid?.ModelName ?? (friendlyName.Length > 0 ? friendlyName : instanceId);
+        return new Monitor(MonitorIdentity.Key(edid, devicePath), model, model, isInternal, gdiName, instanceId, physical, controllable, settings);
     }
 
     private static unsafe DISPLAYCONFIG_PATH_INFO[] ActivePaths()
