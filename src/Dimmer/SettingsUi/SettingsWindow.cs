@@ -49,10 +49,10 @@ public sealed class SettingsWindow : Window
         Closed += (_, _) => _app.Monitors.Changed -= OnMonitorsChanged;
     }
 
-    // 抜き差しや名前の変更で一覧が変わったら描き直す（Monitor の一覧を使うページだけ）
+    // 列挙の完了・抜き差し・名前の変更で一覧が変わったら、Monitor を選ぶ欄があるページを描き直す
     private void OnMonitorsChanged() => DispatcherQueue.TryEnqueue(() =>
     {
-        if (_page is "Monitors") Render();
+        if (_page is "Monitors" or "Profiles" or "Adjustments") Render();
     });
 
     private void Changed() => _app.SettingsChanged();
@@ -92,7 +92,7 @@ public sealed class SettingsWindow : Window
                 if (value == (S.MonitorNames.GetValueOrDefault(m.Key) ?? "")) return;
                 if (value.Length == 0) S.MonitorNames.Remove(m.Key);
                 else S.MonitorNames[m.Key] = value;
-                Changed();
+                _app.SettingsChanged(monitorNamesChanged: true);
             };
             body.Children.Add(name);
 

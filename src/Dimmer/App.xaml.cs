@@ -96,11 +96,12 @@ public partial class App : Application
     }
 
     /// <summary>設定画面で変更したら呼ぶ。すぐに保存し、表示名・トレイメニュー・Shortcut に反映する。</summary>
-    public void SettingsChanged()
+    /// <param name="monitorNamesChanged">Monitor Name を変えたか（変えたときだけ表示名を付け直す）</param>
+    public void SettingsChanged(bool monitorNamesChanged = false)
     {
         Cycles.RemoveMissingProfiles(Settings.Settings);
         Settings.Save();
-        Monitors.SetUserNames(new Dictionary<string, string>(Settings.Settings.MonitorNames));
+        if (monitorNamesChanged) Monitors.SetUserNames(new Dictionary<string, string>(Settings.Settings.MonitorNames));
         RebuildTrayMenu();
         if (!_shortcutsSuspended) BindShortcuts();
     }

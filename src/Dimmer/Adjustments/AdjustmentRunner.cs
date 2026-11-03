@@ -34,13 +34,15 @@ public sealed class AdjustmentRunner(
     public void Press(Adjustment adjustment)
     {
         _session?.Release();
-        _session = new Session(this, adjustment);
+        // 実行中に設定画面で中身を変えられても影響を受けないよう、押した時点の中身を写して使う
+        var snapshot = new Adjustment { Id = adjustment.Id, Setting = adjustment.Setting, Target = adjustment.Target, Delta = adjustment.Delta, Shortcut = adjustment.Shortcut };
+        _session = new Session(this, adjustment, snapshot);
         _ = _session.StartAsync();
     }
 
     public void Release(Adjustment adjustment)
     {
-        if (_session?.Adjustment == adjustment) _session.Release();
+        if (_session?.Original == adjustment) _session.Release();
     }
 
     private sealed class Target(Monitor monitor, int current, LatestWriter writer)
@@ -51,7 +53,9 @@ public sealed class AdjustmentRunner(
         public int Value { get; set; } = current;
     }
 
-    private sealed class Session(AdjustmentRunner runner, Adjustment adjustment)
+    /// <param name="original">押された Adjustment（離されたときの照合に使う）</param>
+    /// <param name="adjustment">押した時点の中身の写し（実行にはこちらを使う）</param>
+    private sealed class Session(AdjustmentRunner runner, Adjustment original, Adjustment adjustment)
     {
         private readonly Stopwatch _held = Stopwatch.StartNew();
         // Cursor Monitor は押した瞬間のカーソルの位置で決める（列挙や前の操作を待つ間にカーソルが動いても変えない）
@@ -65,7 +69,7 @@ public sealed class AdjustmentRunner(
         private nint _overlayMonitor;
         private int _steps;
 
-        public Adjustment Adjustment => adjustment;
+        public Adjustment Original => original;
 
         public async Task StartAsync()
         {
