@@ -14,7 +14,9 @@ namespace Dimmer.Adjustments;
 /// </summary>
 /// <param name="showOverlay">Overlay を出す（タイトル、詳細、%、HMONITOR）</param>
 /// <param name="notifyFailure">書き込みに失敗した Monitor Name を知らせる</param>
+/// <param name="gate">Profile の Apply と共有する順番待ち。古い現在値からの書き込みで、後の操作を上書きしないようにする</param>
 public sealed class AdjustmentRunner(
+    SemaphoreSlim gate,
     MonitorService monitors,
     Func<IReadOnlyDictionary<string, string>> monitorNames,
     Action<string, string?, int?, nint> showOverlay,
@@ -22,6 +24,7 @@ public sealed class AdjustmentRunner(
 {
     private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(20);
 
+    private readonly SemaphoreSlim _gate = gate;
     private readonly MonitorService _monitors = monitors;
     private readonly Func<IReadOnlyDictionary<string, string>> _monitorNames = monitorNames;
     private readonly Action<string, string?, int?, nint> _showOverlay = showOverlay;
@@ -72,11 +75,15 @@ public sealed class AdjustmentRunner(
         public async Task StartAsync(Task previous)
         {
             var lease = runner._monitors.Lease();
+            var gated = false;
             try
             {
                 await runner._monitors.Ready;
                 try { await previous; }
                 catch (Exception e) { Log.Write($"Previous adjustment failed: {e.Message}"); }
+                // 現在値を読んでから書き込みが終わるまで、Profile の Apply と順番を守る
+                await runner._gate.WaitAsync();
+                gated = true;
                 var (selected, shown) = Resolve();
                 if (selected is null) return;
 
@@ -104,6 +111,7 @@ public sealed class AdjustmentRunner(
             }
             finally
             {
+                if (gated) runner._gate.Release();
                 lease.Dispose();
                 if (_failed.Count > 0) runner._notifyFailure(adjustment, _failed.Distinct().ToList());
             }

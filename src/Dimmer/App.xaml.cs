@@ -74,7 +74,7 @@ public partial class App : Application
         };
         Task.Run(Monitors.Refresh);
 
-        _adjustments = new AdjustmentRunner(Monitors, () => Settings.Settings.MonitorNames, ShowOverlay, (a, failed) =>
+        _adjustments = new AdjustmentRunner(_applyGate, Monitors, () => Settings.Settings.MonitorNames, ShowOverlay, (a, failed) =>
             Notifier.Show(Text.Format("AdjustmentFailedTitle", Text.Adjustment(a, Settings.Settings.MonitorNames)),
                 Text.Format("AdjustmentFailedBody", string.Join("、", failed))));
 
