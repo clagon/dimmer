@@ -1,0 +1,66 @@
+name: Release
+
+# v で始まるタグ（例: v0.1.0）を push すると、署名済みの MSIX を GitHub Releases に上げる
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: テスト
+        run: dotnet test tests/Dimmer.Tests
+
+      - name: パッケージのバージョンをタグに合わせる
+        shell: pwsh
+        run: |
+          $parts = "${{ github.ref_name }}".TrimStart('v').Split('.')
+          while ($parts.Count -lt 3) { $parts += '0' }
+          $version = "$($parts[0]).$($parts[1]).$($parts[2]).0"
+          $manifest = 'src/Dimmer/Package.appxmanifest'
+          (Get-Content $manifest -Raw) -replace '(<Identity [^>]*Version=")[^"]+"', "`${1}$version`"" | Set-Content $manifest -NoNewline
+          Select-String -Path $manifest -Pattern '<Identity'
+
+      - name: MSIX を作る
+        shell: pwsh
+        run: >
+          dotnet build src/Dimmer/Dimmer.csproj -c Release -p:Platform=x64
+          -p:GenerateAppxPackageOnBuild=true -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly
+          -p:AppxPackageSigningEnabled=false "-p:AppxPackageDir=$env:RUNNER_TEMP\pkg\"
+
+      - name: 署名する
+        shell: pwsh
+        env:
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERT_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          $pfx = "$env:RUNNER_TEMP\Dimmer.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_CERT_BASE64))
+          $msix = (Get-ChildItem "$env:RUNNER_TEMP\pkg" -Recurse -Filter *.msix | Select-Object -First 1).FullName
+          $signtool = (Get-ChildItem "$env:USERPROFILE\.nuget\packages\microsoft.windows.sdk.buildtools\*\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1).FullName
+          & $signtool sign /fd SHA256 /f $pfx /p $env:SIGNING_CERT_PASSWORD $msix
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item $msix "$env:RUNNER_TEMP\Dimmer_x64.msix"
+          # インストールする人が信頼済みとして登録するための、公開鍵だけの証明書
+          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($pfx, $env:SIGNING_CERT_PASSWORD)
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\Dimmer.cer", $cert.Export('Cert'))
+          Remove-Item $pfx
+
+      - name: GitHub Releases に上げる
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          "$env:RUNNER_TEMP\Dimmer_x64.msix" "$env:RUNNER_TEMP\Dimmer.cer"
+          --title "Dimmer ${{ github.ref_name }}" --generate-notes
