@@ -91,4 +91,37 @@
   <data name="CycleProblem_DuplicateProfiles" xml:space="preserve">
     <value>同じ Profile が重複しています</value>
   </data>
+  <data name="CursorMonitor" xml:space="preserve">
+    <value>Cursor Monitor</value>
+  </data>
+  <data name="AllMonitors" xml:space="preserve">
+    <value>全 Monitor</value>
+  </data>
+  <data name="AdjustmentName" xml:space="preserve">
+    <value>{0}の{1} {2}</value>
+  </data>
+  <data name="AdjustmentInvalidTitle" xml:space="preserve">
+    <value>使えない Adjustment があります</value>
+  </data>
+  <data name="AdjustmentInvalid" xml:space="preserve">
+    <value>明るさ・コントラスト・音量のいずれかで、変化量が 0 以外である必要があります</value>
+  </data>
+  <data name="AdjustmentFailedTitle" xml:space="preserve">
+    <value>{0} を実行できませんでした</value>
+  </data>
+  <data name="AdjustmentFailedBody" xml:space="preserve">
+    <value>{0} の値を読み書きできませんでした</value>
+  </data>
+  <data name="OverlayAdjustmentTitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="OverlayNotSupported" xml:space="preserve">
+    <value>{0} は{1}に対応していません</value>
+  </data>
+  <data name="OverlayNoMonitorSupports" xml:space="preserve">
+    <value>{0}に対応している Monitor がありません</value>
+  </data>
+  <data name="OverlayMonitorNotFound" xml:space="preserve">
+    <value>{0} が見つかりません</value>
+  </data>
 </root>
