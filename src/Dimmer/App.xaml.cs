@@ -58,6 +58,7 @@ public partial class App : Application
     public async Task<List<string>> ApplyProfileAsync(Profile profile)
     {
         // 前の Apply の書き込みや再試行が、後から選んだ Profile を上書きしないよう 1 つずつ順に行う
+        await Monitors.Ready;
         await _applyGate.WaitAsync();
         List<string> problems;
         try

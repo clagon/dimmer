@@ -32,6 +32,11 @@ public sealed class MonitorService : IDisposable
         };
     }
 
+    private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>最初の列挙が終わったら完了する。起動直後の Apply が空の一覧で全部スキップしないよう、操作の前に待つ。</summary>
+    public Task Ready => _ready.Task;
+
     /// <summary>直近に列挙した Monitor。並びは Windows の接続パスの順。</summary>
     public IReadOnlyList<Monitor> Monitors { get; private set; } = [];
 
@@ -51,15 +56,23 @@ public sealed class MonitorService : IDisposable
 
     public void Refresh()
     {
-        lock (_refreshGate)
+        try
         {
-            var monitors = Enumerate();
-            lock (_gate)
+            lock (_refreshGate)
             {
-                _retired.AddRange(Monitors.Select(m => m.PhysicalMonitor));
-                Monitors = WithDisplayNames(monitors, _userNames);
-                DestroyRetiredIfUnused();
+                var monitors = Enumerate();
+                lock (_gate)
+                {
+                    _retired.AddRange(Monitors.Select(m => m.PhysicalMonitor));
+                    Monitors = WithDisplayNames(monitors, _userNames);
+                    DestroyRetiredIfUnused();
+                }
             }
+        }
+        finally
+        {
+            // 列挙に失敗しても、待っている操作が止まったままにならないようにする
+            _ready.TrySetResult();
         }
         Changed?.Invoke();
     }

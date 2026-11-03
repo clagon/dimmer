@@ -72,6 +72,8 @@ public sealed class SettingsFileTests : IDisposable
     [InlineData("""{ "profiles": [ { "id": null, "name": "a" } ] }""")]
     [InlineData("""{ "monitorNames": null }""")]
     [InlineData("null")]
+    [InlineData("""{ "profiles": [ { "id": "a", "name": "a", "entries": [ { "monitor": "M" } ] } ] }""")]
+    [InlineData("""{ "profiles": [ { "id": "a", "name": "a", "entries": [ { "monitor": "M", "setting": "brightness" } ] } ] }""")]
     public void 必須の項目がnullなら壊れたファイルとして扱う(string json)
     {
         File.WriteAllText(PathOf, json);

@@ -20,6 +20,8 @@ public sealed class AppSettings
         WriteIndented = true,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
         ReadCommentHandling = JsonCommentHandling.Skip,
+        // 手で書いた JSON で "setting" や "value" が抜けていたら、既定値（明るさ 0%）で Apply しないよう読み込みエラーにする
+        RespectRequiredConstructorParameters = true,
         AllowTrailingCommas = true,
     };
 }
