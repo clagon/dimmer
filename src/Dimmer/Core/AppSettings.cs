@@ -14,6 +14,9 @@ public sealed class AppSettings
     /// <summary>直近に Apply された Profile の ID。</summary>
     public string? LastAppliedProfileId { get; set; }
 
+    /// <summary>Shortcut の実行時に Overlay を出すか。無効でもエラーのトースト通知は出す。</summary>
+    public bool OverlayEnabled { get; set; } = true;
+
     internal static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

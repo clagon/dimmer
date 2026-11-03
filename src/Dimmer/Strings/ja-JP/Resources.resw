@@ -73,4 +73,7 @@
   <data name="ShortcutFailedLine" xml:space="preserve">
     <value>{0}（{1}）: {2}</value>
   </data>
+  <data name="OverlayPartialFailure" xml:space="preserve">
+    <value>一部適用できませんでした</value>
+  </data>
 </root>
