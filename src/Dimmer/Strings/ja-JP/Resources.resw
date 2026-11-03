@@ -58,4 +58,19 @@
     <value>空の設定で起動しました。ファイルは上書きしないので、修正してから Dimmer を再起動してください。
 {0}</value>
   </data>
+  <data name="ShortcutInvalid" xml:space="preserve">
+    <value>キーの組み合わせが正しくありません（Ctrl・Alt・Shift・Win のいずれかが必要です。F13〜F24 は不要です）</value>
+  </data>
+  <data name="ShortcutDuplicate" xml:space="preserve">
+    <value>同じキーが複数の対象に割り当てられています</value>
+  </data>
+  <data name="ShortcutRegisterFailed" xml:space="preserve">
+    <value>他のアプリが使っているか、Windows が予約しているキーです</value>
+  </data>
+  <data name="ShortcutFailedTitle" xml:space="preserve">
+    <value>Shortcut を登録できませんでした</value>
+  </data>
+  <data name="ShortcutFailedLine" xml:space="preserve">
+    <value>{0}（{1}）: {2}</value>
+  </data>
 </root>
