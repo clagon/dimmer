@@ -13,6 +13,11 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
 
+  <!-- WinUI に依存しないロジック（src/Dimmer/Core）だけをリンクしてテストする -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Dimmer\Core\**\*.cs" LinkBase="Core" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
