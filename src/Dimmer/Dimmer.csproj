@@ -11,6 +11,8 @@
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' And '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
+    <!-- .NET ランタイムが入っていない PC でも動くように同梱する -->
+    <SelfContained>true</SelfContained>
     <EnableMsixTooling>true</EnableMsixTooling>
     <DefaultLanguage>ja-JP</DefaultLanguage>
     <Nullable>enable</Nullable>
