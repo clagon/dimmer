@@ -32,3 +32,11 @@ powershell.exe -NoProfile -Command "Get-AppxPackage Dimmer | Remove-AppxPackage"
 ```
 
 ARM64 向けには `-p:Platform=ARM64` を付けてビルドし、`win-arm64` 側の `AppxManifest.xml` を登録する。
+
+### ログ
+
+不具合調査用のログを `%LOCALAPPDATA%\Packages\Dimmer_qwz61hn511ep6\LocalState\dimmer.log` に書き出す。
+
+## 既知の制限
+
+- シリアル番号を EDID に持たない同じ型番の Monitor が 2 台あると、ケーブルを差し替えたときに取り違える（シリアル番号が無い Monitor は接続パスで特定しているため）。検知はしない

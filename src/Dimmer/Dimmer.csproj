@@ -19,6 +19,7 @@
     <DefaultLanguage>ja-JP</DefaultLanguage>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- 多重起動の判定を Application.Start より前に行うため、Main を自前で持つ -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
@@ -31,6 +32,8 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
     <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.367" PrivateAssets="all" />
+    <PackageReference Include="System.Management" Version="10.0.14" />
   </ItemGroup>
 
 </Project>

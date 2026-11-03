@@ -1,0 +1,17 @@
+QueryDisplayConfig
+GetDisplayConfigBufferSizes
+DisplayConfigGetDeviceInfo
+DISPLAYCONFIG_TARGET_DEVICE_NAME
+DISPLAYCONFIG_SOURCE_DEVICE_NAME
+EnumDisplayMonitors
+GetMonitorInfo
+MONITORINFOEXW
+GetPhysicalMonitorsFromHMONITOR
+GetNumberOfPhysicalMonitorsFromHMONITOR
+DestroyPhysicalMonitors
+GetCapabilitiesStringLength
+RegisterClassEx
+CreateWindowEx
+DefWindowProc
+DestroyWindow
+WM_DISPLAYCHANGE
