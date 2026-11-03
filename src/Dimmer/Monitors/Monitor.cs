@@ -1,3 +1,5 @@
+using Dimmer.Core;
+
 namespace Dimmer.Monitors;
 
 /// <summary>接続中の 1 台の Monitor。</summary>
@@ -8,7 +10,8 @@ namespace Dimmer.Monitors;
 /// <param name="GdiDeviceName"><c>\\.\DISPLAY1</c> のような GDI のデバイス名。Orientation の変更に使う</param>
 /// <param name="InstanceId"><c>DISPLAY\DEL4099\...</c> のようなデバイスインスタンス ID。WMI の InstanceName の接頭辞</param>
 /// <param name="PhysicalMonitor">DDC/CI 用の物理モニターハンドル。無ければ 0</param>
-/// <param name="IsControllable">Setting を操作できるか（DDC/CI に応答する、または内蔵パネルの明るさを WMI で操作できる）</param>
+/// <param name="IsControllable">DDC/CI に応答する、または内蔵パネルの明るさを WMI で操作できるか。false なら Orientation 以外は操作できない</param>
+/// <param name="Settings">対応している Setting と選択肢（連続値は空）。capabilities で報告されていない Setting と値は含まない</param>
 public sealed record Monitor(
     string Key,
     string ModelName,
@@ -17,4 +20,5 @@ public sealed record Monitor(
     string GdiDeviceName,
     string InstanceId,
     nint PhysicalMonitor,
-    bool IsControllable);
+    bool IsControllable,
+    IReadOnlyDictionary<Setting, IReadOnlyList<int>> Settings);
