@@ -10,6 +10,8 @@ public sealed class AppSettings
 
     public List<ProfileCycle> Cycles { get; set; } = [];
 
+    public List<Adjustment> Adjustments { get; set; } = [];
+
     /// <summary>ユーザーが付けた Monitor Name（特定キー → 名前）。</summary>
     public Dictionary<string, string> MonitorNames { get; set; } = [];
 
@@ -53,6 +55,34 @@ public sealed class ProfileCycle
 
     /// <summary>割り当てた Shortcut（例: Ctrl+Alt+C）。無ければ null。</summary>
     public string? Shortcut { get; set; }
+}
+
+/// <summary>特定の Setting を現在値から一定量だけ増減させる相対操作。名前は持たず、表示名は中身から作る。</summary>
+public sealed class Adjustment
+{
+    public const string CursorMonitor = "cursor";
+    public const string AllMonitors = "all";
+
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>明るさ・コントラスト・音量のいずれか。</summary>
+    public Setting Setting { get; set; } = Setting.Brightness;
+
+    /// <summary>対象の Monitor。<see cref="CursorMonitor"/>、<see cref="AllMonitors"/>、または Monitor の特定キー。</summary>
+    public string Target { get; set; } = CursorMonitor;
+
+    /// <summary>1 回あたりの変化量（符号付きの %）。</summary>
+    public int Delta { get; set; } = 10;
+
+    /// <summary>割り当てた Shortcut。無ければ null。</summary>
+    public string? Shortcut { get; set; }
+
+    /// <summary>使えるか（連続値の Setting で、変化量が 0 でなく、対象がある）。</summary>
+    [JsonIgnore]
+    public bool IsValid => Setting.IsContinuous() && Delta != 0 && !string.IsNullOrWhiteSpace(Target);
+
+    /// <summary>現在値に <paramref name="steps"/> 回分の変化量を足し、0〜100% に収める。</summary>
+    public int Apply(int current, int steps) => Math.Clamp(current + Delta * steps, 0, 100);
 }
 
 /// <param name="Monitor">Monitor の特定キー</param>

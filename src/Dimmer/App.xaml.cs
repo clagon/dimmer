@@ -1,3 +1,4 @@
+using Dimmer.Adjustments;
 using Dimmer.Core;
 using Dimmer.Monitors;
 using Dimmer.Overlay;
@@ -25,6 +26,7 @@ public partial class App : Application
     private HotkeyService? _hotkeys;
     private OverlayWindow? _overlay;
     private int _overlayRequest;
+    private AdjustmentRunner? _adjustments;
 
     public SettingsFile Settings { get; } = new(Path.Combine(ApplicationData.Current.LocalFolder.Path, "settings.json"));
 
@@ -37,6 +39,11 @@ public partial class App : Application
     {
         if (Settings.Load() is { } error)
             Notifier.Show(Text.Get("SettingsLoadFailedTitle"), Text.Format("SettingsLoadFailedBody", error));
+
+        var invalidAdjustments = Settings.Settings.Adjustments.Where(a => !a.IsValid).ToList();
+        if (invalidAdjustments.Count > 0)
+            Notifier.Show(Text.Get("AdjustmentInvalidTitle"),
+                string.Join("\n", invalidAdjustments.Select(a => $"{Text.Adjustment(a, Settings.Settings.MonitorNames)}: {Text.Get("AdjustmentInvalid")}")));
 
         // 存在しない Profile は Cycle から取り除き、使えない Cycle を知らせる（Shortcut は登録しない）
         Cycles.RemoveMissingProfiles(Settings.Settings);
@@ -67,6 +74,10 @@ public partial class App : Application
         };
         Task.Run(Monitors.Refresh);
 
+        _adjustments = new AdjustmentRunner(Monitors, () => Settings.Settings.MonitorNames, ShowOverlay, (a, failed) =>
+            Notifier.Show(Text.Format("AdjustmentFailedTitle", Text.Adjustment(a, Settings.Settings.MonitorNames)),
+                Text.Format("AdjustmentFailedBody", string.Join("、", failed))));
+
         _hotkeys = new HotkeyService(_messageWindow);
         Shortcuts = new ShortcutBindings(_hotkeys);
         var failed = BindShortcuts();
@@ -87,7 +98,12 @@ public partial class App : Application
         {
             if (!isRepeat) _ = ApplyNextInCycleAsync(c);
         }));
-        return Shortcuts.Bind(profiles.Concat(cycles));
+        // Adjustment は自前の間隔で繰り返すので、キーリピートの通知は無視して離されるまで続ける
+        var adjustments = Settings.Settings.Adjustments.Where(a => a.IsValid).Select(a => new ShortcutTarget(
+            Text.Adjustment(a, Settings.Settings.MonitorNames), a.Shortcut ?? "",
+            isRepeat => { if (!isRepeat) _adjustments!.Press(a); },
+            () => _adjustments!.Release(a)));
+        return Shortcuts.Bind(profiles.Concat(cycles).Concat(adjustments));
     }
 
     /// <summary>Profile Cycle の次の Profile を Apply し、Overlay に Profile 名と並びの中の位置（例: 2/3）を出す。</summary>
@@ -108,8 +124,8 @@ public partial class App : Application
         // 前の Apply が終わる前に Cycle の Shortcut が押されても次へ進むよう、待つ前に「直近」として記録する
         Settings.Settings.LastAppliedProfileId = profile.Id;
         // Overlay は共有なので、後から実行した Shortcut の表示を古い Apply の結果で上書きしないよう、最新の要求だけが更新する
-        var overlayRequest = overlay ? ++_overlayRequest : 0;
         if (overlay) ShowOverlay(profile.Name, position);
+        var overlayRequest = _overlayRequest;
 
         // 前の Apply の書き込みや再試行が、後から選んだ Profile を上書きしないよう 1 つずつ順に行う
         await Monitors.Ready;
@@ -136,6 +152,8 @@ public partial class App : Application
     /// <summary>Overlay を出す（設定で無効なら何もしない）。引数は <see cref="OverlayWindow.Show"/> と同じ。</summary>
     public void ShowOverlay(string title, string? detail = null, int? percent = null, nint monitor = 0)
     {
+        // Adjustment など他の表示が後から出たら、実行中の Apply の結果で上書きしない
+        _overlayRequest++;
         if (!Settings.Settings.OverlayEnabled) return;
         (_overlay ??= new OverlayWindow()).Show(title, detail, percent, monitor);
     }
