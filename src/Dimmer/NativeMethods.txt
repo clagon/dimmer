@@ -25,3 +25,10 @@ RegisterHotKey
 UnregisterHotKey
 GetAsyncKeyState
 WM_HOTKEY
+GetCursorPos
+MonitorFromPoint
+GetDpiForMonitor
+SetWindowLong
+GetWindowLong
+SetLayeredWindowAttributes
+WINDOW_EX_STYLE

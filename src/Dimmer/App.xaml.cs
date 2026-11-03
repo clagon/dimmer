@@ -1,5 +1,6 @@
 using Dimmer.Core;
 using Dimmer.Monitors;
+using Dimmer.Overlay;
 using Dimmer.Profiles;
 using Dimmer.Shortcuts;
 using H.NotifyIcon;
@@ -22,6 +23,7 @@ public partial class App : Application
     public ShortcutBindings Shortcuts { get; private set; } = null!;
 
     private HotkeyService? _hotkeys;
+    private OverlayWindow? _overlay;
 
     public SettingsFile Settings { get; } = new(Path.Combine(ApplicationData.Current.LocalFolder.Path, "settings.json"));
 
@@ -70,14 +72,18 @@ public partial class App : Application
         Shortcuts.Bind(Settings.Settings.Profiles.Select(p => new ShortcutTarget(p.Name, p.Shortcut ?? "", isRepeat =>
         {
             // Profile の Apply はキーリピートを無視し、1 回押すと 1 回だけ実行する
-            if (!isRepeat) _ = ApplyProfileAsync(p);
+            if (!isRepeat) _ = ApplyProfileAsync(p, overlay: true);
         })));
 
     /// <summary>Profile を Apply し、直近に Apply された Profile として保存する。スキップや失敗があればトーストで知らせる。</summary>
+    /// <param name="overlay">Overlay に Profile 名を出すか（Shortcut から実行したとき）</param>
+    /// <param name="position">Overlay に一緒に出す、Profile Cycle の中の位置（例: 2/3）</param>
     /// <returns>スキップや失敗の一覧</returns>
-    public async Task<List<string>> ApplyProfileAsync(Profile profile)
+    public async Task<List<string>> ApplyProfileAsync(Profile profile, bool overlay = false, string? position = null)
     {
         Log.Write($"Apply: {profile.Name}");
+        if (overlay) ShowOverlay(profile.Name, position);
+
         // 前の Apply の書き込みや再試行が、後から選んだ Profile を上書きしないよう 1 つずつ順に行う
         await Monitors.Ready;
         await _applyGate.WaitAsync();
@@ -91,8 +97,21 @@ public partial class App : Application
         finally { _applyGate.Release(); }
         Settings.Settings.LastAppliedProfileId = profile.Id;
         Settings.Save();
-        if (problems.Count > 0) Notifier.Show(Text.Format("ApplyProblemsTitle", profile.Name), string.Join("\n", problems));
+
+        if (problems.Count > 0)
+        {
+            // 詳しい内容はトーストに任せ、Overlay には一部を適用できなかったことだけを出す
+            if (overlay) ShowOverlay(profile.Name, position is null ? Text.Get("OverlayPartialFailure") : $"{position}  {Text.Get("OverlayPartialFailure")}");
+            Notifier.Show(Text.Format("ApplyProblemsTitle", profile.Name), string.Join("\n", problems));
+        }
         return problems;
+    }
+
+    /// <summary>Overlay を出す（設定で無効なら何もしない）。引数は <see cref="OverlayWindow.Show"/> と同じ。</summary>
+    public void ShowOverlay(string title, string? detail = null, int? percent = null, nint monitor = 0)
+    {
+        if (!Settings.Settings.OverlayEnabled) return;
+        (_overlay ??= new OverlayWindow()).Show(title, detail, percent, monitor);
     }
 
     /// <summary>
