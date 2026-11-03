@@ -131,8 +131,9 @@ public static class MonitorSettings
     private static bool WriteInternalBrightness(Monitor monitor, int percent)
     {
         using var methods = (ManagementObject)WmiInstance(monitor, "WmiMonitorBrightnessMethods");
-        methods.InvokeMethod("WmiSetBrightness", [(uint)1, (byte)percent]);
-        return true;
+        // 成功なら 0、失敗ならエラーコードを返す
+        var status = methods.InvokeMethod("WmiSetBrightness", [(uint)1, (byte)percent]);
+        return status is null || Convert.ToInt64(status) == 0 ? true : throw new SettingException($"WmiSetBrightness returned {status}");
     }
 
     private static ManagementBaseObject WmiInstance(Monitor monitor, string className)
