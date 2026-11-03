@@ -390,6 +390,47 @@ public sealed class SettingsWindow : Window
         var overlay = new ToggleSwitch { Header = Text.Get("UiOverlayEnabled"), IsOn = S.OverlayEnabled };
         overlay.Toggled += (_, _) => { S.OverlayEnabled = overlay.IsOn; Changed(); };
         panel.Children.Add(Card(overlay));
+
+        // 自動起動はトグルに StartupTask の状態をそのまま出す（Windows の設定で無効にされたら無効と表示する）
+        var startup = new ToggleSwitch { Header = Text.Get("UiStartupEnabled"), IsEnabled = false };
+        var note = Note("");
+        note.Visibility = Visibility.Collapsed;
+        var body = new StackPanel { Spacing = 8 };
+        body.Children.Add(startup);
+        body.Children.Add(note);
+        panel.Children.Add(Card(body));
+        _ = ShowStartupAsync(startup, note);
+    }
+
+    private const string StartupTaskId = "DimmerStartup";
+
+    private static async Task ShowStartupAsync(ToggleSwitch toggle, TextBlock note)
+    {
+        var task = await Windows.ApplicationModel.StartupTask.GetAsync(StartupTaskId);
+        void Show()
+        {
+            var state = task.State;
+            toggle.IsOn = state is Windows.ApplicationModel.StartupTaskState.Enabled or Windows.ApplicationModel.StartupTaskState.EnabledByPolicy;
+            // ユーザーが Windows の設定で無効にしたものや、ポリシーで決められたものはアプリから変えられない
+            toggle.IsEnabled = state is Windows.ApplicationModel.StartupTaskState.Enabled or Windows.ApplicationModel.StartupTaskState.Disabled;
+            var message = state switch
+            {
+                Windows.ApplicationModel.StartupTaskState.DisabledByUser => Text.Get("UiStartupDisabledByUser"),
+                Windows.ApplicationModel.StartupTaskState.DisabledByPolicy or Windows.ApplicationModel.StartupTaskState.EnabledByPolicy => Text.Get("UiStartupByPolicy"),
+                _ => null,
+            };
+            note.Text = message ?? "";
+            note.Visibility = message is null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        Show();
+        toggle.Toggled += async (_, _) =>
+        {
+            if (toggle.IsOn == (task.State == Windows.ApplicationModel.StartupTaskState.Enabled)) return;
+            if (toggle.IsOn) await task.RequestEnableAsync();
+            else task.Disable();
+            Show();
+        };
     }
 
     // ---- 部品 ----

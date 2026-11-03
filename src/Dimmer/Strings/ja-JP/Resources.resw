@@ -253,4 +253,13 @@
   <data name="UiKey" xml:space="preserve">
     <value>キー</value>
   </data>
+  <data name="UiStartupEnabled" xml:space="preserve">
+    <value>サインイン時に Dimmer を起動する</value>
+  </data>
+  <data name="UiStartupDisabledByUser" xml:space="preserve">
+    <value>Windows の設定で無効にされています。有効にするには「設定 → アプリ → スタートアップ」で Dimmer をオンにしてください</value>
+  </data>
+  <data name="UiStartupByPolicy" xml:space="preserve">
+    <value>組織のポリシーで決められているため変更できません</value>
+  </data>
 </root>
