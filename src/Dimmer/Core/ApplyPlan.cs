@@ -27,7 +27,7 @@ public static class ApplyPlan
         var skipped = new List<Skipped>();
         var writes = new List<MonitorWrites>();
 
-        foreach (var group in profile.Entries.GroupBy(e => e.Monitor))
+        foreach (var group in profile.Entries.Where(e => e.Enabled).GroupBy(e => e.Monitor))
         {
             if (!supported.TryGetValue(group.Key, out var settings))
             {

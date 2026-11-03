@@ -4,7 +4,9 @@ using Dimmer.Monitors;
 using Dimmer.Overlay;
 using Dimmer.Profiles;
 using Dimmer.Shortcuts;
+using Dimmer.SettingsUi;
 using H.NotifyIcon;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -27,6 +29,9 @@ public partial class App : Application
     private OverlayWindow? _overlay;
     private int _overlayRequest;
     private AdjustmentRunner? _adjustments;
+    private SettingsWindow? _settingsWindow;
+    private DispatcherQueue? _dispatcher;
+    private bool _shortcutsSuspended;
 
     public SettingsFile Settings { get; } = new(Path.Combine(ApplicationData.Current.LocalFolder.Path, "settings.json"));
 
@@ -43,7 +48,7 @@ public partial class App : Application
         var invalidAdjustments = Settings.Settings.Adjustments.Where(a => !a.IsValid).ToList();
         if (invalidAdjustments.Count > 0)
             Notifier.Show(Text.Get("AdjustmentInvalidTitle"),
-                string.Join("\n", invalidAdjustments.Select(a => $"{Text.Adjustment(a, Settings.Settings.MonitorNames)}: {Text.Get("AdjustmentInvalid")}")));
+                string.Join("\n", invalidAdjustments.Select(a => $"{AdjustmentName(a)}: {Text.Get("AdjustmentInvalid")}")));
 
         // 存在しない Profile は Cycle から取り除き、使えない Cycle を知らせる（Shortcut は登録しない）
         Cycles.RemoveMissingProfiles(Settings.Settings);
@@ -52,12 +57,16 @@ public partial class App : Application
             Notifier.Show(Text.Get("CycleInvalidTitle"),
                 string.Join("\n", invalidCycles.Select(c => Text.Format("CycleInvalidLine", c.Name, Text.Get($"CycleProblem_{Cycles.Problem(c)}")))));
 
-        // ウィンドウは持たず、トレイアイコンだけで常駐する
+        _dispatcher = DispatcherQueue.GetForCurrentThread();
+
+        // 起動時はウィンドウを出さず、トレイアイコンだけで常駐する。左クリックで設定画面を開く
         _trayIcon = new TaskbarIcon
         {
             ToolTipText = Text.Get("TrayToolTip"),
             IconSource = new BitmapImage(new Uri("ms-appx:///Assets/TrayIcon.ico")),
             ContextMenuMode = ContextMenuMode.SecondWindow,
+            NoLeftClickDelay = true,
+            LeftClickCommand = new Command(OpenSettings),
         };
         RebuildTrayMenu();
         _trayIcon.ForceCreate();
@@ -75,7 +84,7 @@ public partial class App : Application
         Task.Run(Monitors.Refresh);
 
         _adjustments = new AdjustmentRunner(_applyGate, Monitors, () => Settings.Settings.MonitorNames, ShowOverlay, (a, failed) =>
-            Notifier.Show(Text.Format("AdjustmentFailedTitle", Text.Adjustment(a, Settings.Settings.MonitorNames)),
+            Notifier.Show(Text.Format("AdjustmentFailedTitle", AdjustmentName(a)),
                 Text.Format("AdjustmentFailedBody", string.Join("、", failed))));
 
         _hotkeys = new HotkeyService(_messageWindow);
@@ -84,6 +93,66 @@ public partial class App : Application
         if (failed.Count > 0)
             Notifier.Show(Text.Get("ShortcutFailedTitle"),
                 string.Join("\n", failed.Select(f => Text.Format("ShortcutFailedLine", f.TargetName, f.Shortcut, f.Reason))));
+    }
+
+    /// <summary>設定画面で変更したら呼ぶ。すぐに保存し、表示名・トレイメニュー・Shortcut に反映する。</summary>
+    /// <param name="monitorNamesChanged">Monitor Name を変えたか（変えたときだけ表示名を付け直す）</param>
+    public void SettingsChanged(bool monitorNamesChanged = false)
+    {
+        Cycles.RemoveMissingProfiles(Settings.Settings);
+        Settings.Save();
+        if (monitorNamesChanged) Monitors.SetUserNames(new Dictionary<string, string>(Settings.Settings.MonitorNames));
+        RebuildTrayMenu();
+        if (!_shortcutsSuspended) BindShortcuts();
+    }
+
+    /// <summary>Shortcut の入力欄でキーを記録している間、既存の Shortcut をすべて一時的に止める。</summary>
+    public void SuspendShortcuts()
+    {
+        _shortcutsSuspended = true;
+        _hotkeys!.UnregisterAll();
+    }
+
+    public void ResumeShortcuts()
+    {
+        _shortcutsSuspended = false;
+        BindShortcuts();
+    }
+
+    /// <summary><paramref name="shortcut"/> を使っている、<paramref name="except"/> 以外の対象の名前。無ければ null。</summary>
+    public string? ShortcutOwner(Shortcut shortcut, object except)
+    {
+        var s = Settings.Settings;
+        IEnumerable<(object Target, string Name, string? Shortcut)> all =
+            s.Profiles.Select(p => ((object)p, p.Name, p.Shortcut))
+            .Concat(s.Cycles.Select(c => ((object)c, c.Name, c.Shortcut)))
+            .Concat(s.Adjustments.Select(a => ((object)a, AdjustmentName(a), a.Shortcut)));
+        return all.FirstOrDefault(t => t.Target != except && Shortcut.Parse(t.Shortcut) == shortcut).Name;
+    }
+
+    /// <summary>Adjustment の表示名。対象の Monitor は、つながっていれば今の表示名、なければ Monitor Name で表す。</summary>
+    public string AdjustmentName(Adjustment a)
+    {
+        var names = new Dictionary<string, string>(Settings.Settings.MonitorNames);
+        foreach (var m in Monitors?.Monitors ?? []) names[m.Key] = m.DisplayName;
+        return Text.Adjustment(a, names);
+    }
+
+    /// <summary>Profile の Apply や Adjustment と順番を守って Monitor を読み書きする（途中の状態を読まないように）。</summary>
+    public async Task<T> RunExclusiveAsync<T>(Func<Task<T>> operation)
+    {
+        await Monitors.Ready;
+        await _applyGate.WaitAsync();
+        try { return await operation(); }
+        finally { _applyGate.Release(); }
+    }
+
+    /// <summary>設定画面を開く（開いていれば前面に出す）。</summary>
+    public void OpenSettings()
+    {
+        _settingsWindow ??= new SettingsWindow(this);
+        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        _settingsWindow.Activate();
     }
 
     /// <summary>設定ファイルの Shortcut を登録し直す。登録できなかったものを返す。</summary>
@@ -100,7 +169,7 @@ public partial class App : Application
         }));
         // Adjustment は自前の間隔で繰り返すので、キーリピートの通知は無視して離されるまで続ける
         var adjustments = Settings.Settings.Adjustments.Where(a => a.IsValid).Select(a => new ShortcutTarget(
-            Text.Adjustment(a, Settings.Settings.MonitorNames), a.Shortcut ?? "",
+            AdjustmentName(a), a.Shortcut ?? "",
             isRepeat => { if (!isRepeat) _adjustments!.Press(a); },
             () => _adjustments!.Release(a)));
         return Shortcuts.Bind(profiles.Concat(cycles).Concat(adjustments));
@@ -173,6 +242,10 @@ public partial class App : Application
         }
         if (menu.Items.Count > 0) menu.Items.Add(new MenuFlyoutSeparator());
 
+        var settings = new MenuFlyoutItem { Text = Text.Get("TraySettings") };
+        settings.Click += (_, _) => OpenSettings();
+        menu.Items.Add(settings);
+
         var exit = new MenuFlyoutItem { Text = Text.Get("TrayExit") };
         exit.Click += (_, _) => ExitApp();
         menu.Items.Add(exit);
@@ -183,7 +256,8 @@ public partial class App : Application
     /// <summary>2 つ目のインスタンスから起動が転送されたときに呼ばれる（UI スレッド外）。</summary>
     public void OnRedirectedActivation(AppActivationArguments args)
     {
-        // TODO(#9): 設定画面を開く
+        // 2 つ目のインスタンスが起動されたら、1 つ目の設定画面を開いて前面に出す
+        _dispatcher?.TryEnqueue(OpenSettings);
     }
 
     private void ExitApp()

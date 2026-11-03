@@ -52,6 +52,8 @@ public sealed class HotkeyService : IDisposable
 
     public void UnregisterAll()
     {
+        // 押している途中のものは離されたことにする（登録を消すと離したことを検出できず、Adjustment が止まらなくなる）
+        foreach (var id in _held.ToList()) Released?.Invoke(id);
         foreach (var id in _registered.Keys) PInvoke.UnregisterHotKey(_hwnd, id);
         _registered.Clear();
         _held.Clear();

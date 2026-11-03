@@ -98,7 +98,7 @@
     <value>全 Monitor</value>
   </data>
   <data name="AdjustmentName" xml:space="preserve">
-    <value>{0}の{1} {2}</value>
+    <value>{0} の{1} {2}</value>
   </data>
   <data name="AdjustmentInvalidTitle" xml:space="preserve">
     <value>使えない Adjustment があります</value>
@@ -123,5 +123,134 @@
   </data>
   <data name="OverlayMonitorNotFound" xml:space="preserve">
     <value>{0} が見つかりません</value>
+  </data>
+  <data name="TraySettings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="SettingsTitle" xml:space="preserve">
+    <value>Dimmer の設定</value>
+  </data>
+  <data name="NavMonitors" xml:space="preserve">
+    <value>Monitor</value>
+  </data>
+  <data name="NavProfiles" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="NavCycles" xml:space="preserve">
+    <value>Profile Cycle</value>
+  </data>
+  <data name="NavAdjustments" xml:space="preserve">
+    <value>Adjustment</value>
+  </data>
+  <data name="NavGeneral" xml:space="preserve">
+    <value>全般</value>
+  </data>
+  <data name="UiNoMonitors" xml:space="preserve">
+    <value>Monitor が見つかりません</value>
+  </data>
+  <data name="UiLoadingMonitors" xml:space="preserve">
+    <value>Monitor を読み込んでいます…</value>
+  </data>
+  <data name="UiMonitorName" xml:space="preserve">
+    <value>Monitor Name</value>
+  </data>
+  <data name="UiMonitorNotControllable" xml:space="preserve">
+    <value>操作できません（DDC/CI に応答しません）。向きだけは変更できます</value>
+  </data>
+  <data name="UiMonitorSettings" xml:space="preserve">
+    <value>対応している Setting: {0}</value>
+  </data>
+  <data name="UiNew" xml:space="preserve">
+    <value>新規作成</value>
+  </data>
+  <data name="UiCreateFromCurrent" xml:space="preserve">
+    <value>現在の状態から作成</value>
+  </data>
+  <data name="UiReading" xml:space="preserve">
+    <value>読み込んでいます…</value>
+  </data>
+  <data name="UiNewProfileName" xml:space="preserve">
+    <value>新しい Profile</value>
+  </data>
+  <data name="UiNewCycleName" xml:space="preserve">
+    <value>新しい Profile Cycle</value>
+  </data>
+  <data name="UiProfilesOrderNote" xml:space="preserve">
+    <value>この並び順がトレイメニューの順番になります</value>
+  </data>
+  <data name="UiName" xml:space="preserve">
+    <value>名前</value>
+  </data>
+  <data name="UiEntries" xml:space="preserve">
+    <value>含める Setting（チェックを入れたものだけを Apply します）</value>
+  </data>
+  <data name="UiMonitor" xml:space="preserve">
+    <value>Monitor</value>
+  </data>
+  <data name="UiSetting" xml:space="preserve">
+    <value>Setting</value>
+  </data>
+  <data name="UiTarget" xml:space="preserve">
+    <value>対象</value>
+  </data>
+  <data name="UiDelta" xml:space="preserve">
+    <value>変化量（%）</value>
+  </data>
+  <data name="UiAdd" xml:space="preserve">
+    <value>追加</value>
+  </data>
+  <data name="UiAddProfile" xml:space="preserve">
+    <value>Profile を追加</value>
+  </data>
+  <data name="UiDelete" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="UiMoveUp" xml:space="preserve">
+    <value>上へ</value>
+  </data>
+  <data name="UiMoveDown" xml:space="preserve">
+    <value>下へ</value>
+  </data>
+  <data name="UiApplyNow" xml:space="preserve">
+    <value>今すぐ Apply</value>
+  </data>
+  <data name="UiCycleProfiles" xml:space="preserve">
+    <value>Profile の並び</value>
+  </data>
+  <data name="UiInvalid" xml:space="preserve">
+    <value>無効: {0}</value>
+  </data>
+  <data name="UiInvalidShort" xml:space="preserve">
+    <value>無効</value>
+  </data>
+  <data name="UiOverlayEnabled" xml:space="preserve">
+    <value>Shortcut の実行時に Overlay を表示する</value>
+  </data>
+  <data name="UiDisconnectedMonitor" xml:space="preserve">
+    <value>{0}（未接続）</value>
+  </data>
+  <data name="UiShortcut" xml:space="preserve">
+    <value>Shortcut</value>
+  </data>
+  <data name="UiShortcutPlaceholder" xml:space="preserve">
+    <value>クリックしてキーを押す</value>
+  </data>
+  <data name="UiShortcutRecording" xml:space="preserve">
+    <value>キーの組み合わせを押してください</value>
+  </data>
+  <data name="UiShortcutInUse" xml:space="preserve">
+    <value>{0} で使用中です</value>
+  </data>
+  <data name="UiShortcutFailed" xml:space="preserve">
+    <value>登録できませんでした: {0}</value>
+  </data>
+  <data name="UiClear" xml:space="preserve">
+    <value>解除</value>
+  </data>
+  <data name="UiAssign" xml:space="preserve">
+    <value>割り当て</value>
+  </data>
+  <data name="UiKey" xml:space="preserve">
+    <value>キー</value>
   </data>
 </root>

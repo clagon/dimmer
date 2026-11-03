@@ -58,4 +58,13 @@ public class ApplyPlanTests
         Assert.Empty(writes);
         Assert.Single(skipped);
     }
+
+    [Fact]
+    public void チェックを外した指定は書き込まずスキップにも数えない()
+    {
+        var (writes, skipped) = ApplyPlan.Build(P(new ProfileEntry("A", Setting.Brightness, 40), new ProfileEntry("A", Setting.Contrast, 50, Enabled: false),
+            new ProfileEntry("C", Setting.Brightness, 70, Enabled: false)), Monitors);
+        Assert.Equal([(Setting.Brightness, 40)], writes.Single().Writes);
+        Assert.Empty(skipped);
+    }
 }

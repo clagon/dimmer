@@ -87,4 +87,5 @@ public sealed class Adjustment
 
 /// <param name="Monitor">Monitor の特定キー</param>
 /// <param name="Value">連続値は 0〜100%、選択式は VCP のコード値、Orientation は度数</param>
-public sealed record ProfileEntry(string Monitor, Setting Setting, int Value);
+/// <param name="Enabled">Apply に含めるか（設定画面のチェック）。含めない指定も値を残しておける</param>
+public sealed record ProfileEntry(string Monitor, Setting Setting, int Value, bool Enabled = true);
