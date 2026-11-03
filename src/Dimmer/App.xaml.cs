@@ -105,6 +105,8 @@ public partial class App : Application
     public async Task<List<string>> ApplyProfileAsync(Profile profile, bool overlay = false, string? position = null)
     {
         Log.Write($"Apply: {profile.Name}");
+        // 前の Apply が終わる前に Cycle の Shortcut が押されても次へ進むよう、待つ前に「直近」として記録する
+        Settings.Settings.LastAppliedProfileId = profile.Id;
         // Overlay は共有なので、後から実行した Shortcut の表示を古い Apply の結果で上書きしないよう、最新の要求だけが更新する
         var overlayRequest = overlay ? ++_overlayRequest : 0;
         if (overlay) ShowOverlay(profile.Name, position);
@@ -120,7 +122,6 @@ public partial class App : Application
             problems = await ProfileApplier.ApplyAsync(profile, Monitors.Monitors, Settings.Settings.MonitorNames);
         }
         finally { _applyGate.Release(); }
-        Settings.Settings.LastAppliedProfileId = profile.Id;
         Settings.Save();
 
         if (problems.Count > 0)
