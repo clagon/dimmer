@@ -9,6 +9,10 @@ public class ShortcutTests
     [InlineData("win + shift + f1", Modifiers.Win | Modifiers.Shift, 0x70)]
     [InlineData("F13", Modifiers.None, 0x7C)]
     [InlineData("Ctrl+PageUp", Modifiers.Ctrl, 0x21)]
+    [InlineData("Ctrl+1", Modifiers.Ctrl, '1')]
+    [InlineData("Alt+2", Modifiers.Alt, '2')]
+    [InlineData("Shift+4", Modifiers.Shift, '4')]
+    [InlineData("Win+8", Modifiers.Win, '8')]
     public void 文字列を読む(string text, Modifiers modifiers, int key) => Assert.Equal(new Shortcut(modifiers, key), Shortcut.Parse(text));
 
     [Theory]
@@ -29,6 +33,19 @@ public class ShortcutTests
     [InlineData("F24", true)]
     [InlineData("PageUp", false)]
     public void 修飾キーが必須で_F13からF24は例外(string text, bool valid) => Assert.Equal(valid, Shortcut.Parse(text)!.IsValid);
+
+    [Theory]
+    [InlineData('0')]
+    [InlineData('1')]
+    [InlineData('2')]
+    [InlineData('4')]
+    [InlineData('8')]
+    [InlineData('9')]
+    public void 数字キーを書き出して読み直すと同じ(char key)
+    {
+        var s = new Shortcut(Modifiers.Ctrl, key);
+        Assert.Equal(s, Shortcut.Parse(s.ToString()));
+    }
 
     [Fact]
     public void 書き出して読み直すと同じ()

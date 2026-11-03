@@ -21,6 +21,11 @@ public sealed record Shortcut(Modifiers Modifiers, int Key)
     /// </summary>
     public bool IsValid => Keys.Name(Key) is not null && (Modifiers != Modifiers.None || Key is >= Keys.F13 and <= Keys.F24);
 
+    private static readonly Dictionary<string, Modifiers> ModifierNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Ctrl"] = Modifiers.Ctrl, ["Alt"] = Modifiers.Alt, ["Shift"] = Modifiers.Shift, ["Win"] = Modifiers.Win,
+    };
+
     public override string ToString()
     {
         var parts = new List<string>();
@@ -41,7 +46,8 @@ public sealed record Shortcut(Modifiers Modifiers, int Key)
         foreach (var raw in text.Split('+'))
         {
             var part = raw.Trim();
-            if (Enum.TryParse<Modifiers>(part, true, out var m) && m != Modifiers.None && Enum.IsDefined(m)) { modifiers |= m; continue; }
+            // 修飾キーは名前でだけ受け付ける（Enum.TryParse は "1" などの数値も受け付けてしまう）
+            if (ModifierNames.TryGetValue(part, out var m)) { modifiers |= m; continue; }
             if (key is not null || Keys.Code(part) is not { } code) return null;
             key = code;
         }
