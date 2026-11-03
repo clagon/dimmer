@@ -162,7 +162,9 @@ public sealed class MonitorService : IDisposable
         target.header.id = path.targetInfo.id;
         PInvoke.DisplayConfigGetDeviceInfo(&target.header);
 
+        // ノート PC の内蔵パネルは INTERNAL のほか、LVDS や eDP（DisplayPort embedded）として報告される
         var isInternal = target.outputTechnology is DISPLAYCONFIG_VIDEO_OUTPUT_TECHNOLOGY.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL
+            or DISPLAYCONFIG_VIDEO_OUTPUT_TECHNOLOGY.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_LVDS
             or DISPLAYCONFIG_VIDEO_OUTPUT_TECHNOLOGY.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED
             or DISPLAYCONFIG_VIDEO_OUTPUT_TECHNOLOGY.DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED;
         return (Str(target.monitorDevicePath.AsReadOnlySpan()), Str(target.monitorFriendlyDeviceName.AsReadOnlySpan()), isInternal);
