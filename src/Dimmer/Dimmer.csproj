@@ -13,6 +13,8 @@
     <UseWinUI>true</UseWinUI>
     <!-- .NET ランタイムが入っていない PC でも動くように同梱する -->
     <SelfContained>true</SelfContained>
+    <!-- Windows App Runtime のフレームワークパッケージを別途入れなくても動くように同梱する -->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <EnableMsixTooling>true</EnableMsixTooling>
     <DefaultLanguage>ja-JP</DefaultLanguage>
     <Nullable>enable</Nullable>

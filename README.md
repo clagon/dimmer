@@ -10,9 +10,11 @@
 - .NET 10 SDK（`winget install Microsoft.DotNet.SDK.10`）
 - 開発者モード（設定 → システム → 開発者向け）。署名なしのパッケージを登録するために必要
 
+.NET ランタイムと Windows App SDK ランタイムはアプリに同梱する（`SelfContained` / `WindowsAppSDKSelfContained`）ため、実行する PC に別途入れる必要はない。
+
 ### WSL からのビルドと実行
 
-リポジトリは Windows 側のパス（例: `C:\src\display-ctrler` = `/mnt/c/src/display-ctrler`）に置く。WSL 側のパスでは MSIX のビルドが不安定になる。
+リポジトリは Windows 側のパス（例: `C:\src\display-ctrler` = `/mnt/c/src/display-ctrler`）に置く。WSL 側のパス（`\\wsl.localhost\...`）にあるビルド成果物は `Add-AppxPackage -Register` で登録できない。
 
 ```bash
 # ビルド
