@@ -24,6 +24,7 @@ public partial class App : Application
 
     private HotkeyService? _hotkeys;
     private OverlayWindow? _overlay;
+    private int _overlayRequest;
 
     public SettingsFile Settings { get; } = new(Path.Combine(ApplicationData.Current.LocalFolder.Path, "settings.json"));
 
@@ -82,6 +83,8 @@ public partial class App : Application
     public async Task<List<string>> ApplyProfileAsync(Profile profile, bool overlay = false, string? position = null)
     {
         Log.Write($"Apply: {profile.Name}");
+        // Overlay は共有なので、後から実行した Shortcut の表示を古い Apply の結果で上書きしないよう、最新の要求だけが更新する
+        var overlayRequest = overlay ? ++_overlayRequest : 0;
         if (overlay) ShowOverlay(profile.Name, position);
 
         // 前の Apply の書き込みや再試行が、後から選んだ Profile を上書きしないよう 1 つずつ順に行う
@@ -101,7 +104,7 @@ public partial class App : Application
         if (problems.Count > 0)
         {
             // 詳しい内容はトーストに任せ、Overlay には一部を適用できなかったことだけを出す
-            if (overlay) ShowOverlay(profile.Name, position is null ? Text.Get("OverlayPartialFailure") : $"{position}  {Text.Get("OverlayPartialFailure")}");
+            if (overlay && overlayRequest == _overlayRequest) ShowOverlay(profile.Name, position is null ? Text.Get("OverlayPartialFailure") : $"{position}  {Text.Get("OverlayPartialFailure")}");
             Notifier.Show(Text.Format("ApplyProblemsTitle", profile.Name), string.Join("\n", problems));
         }
         return problems;
