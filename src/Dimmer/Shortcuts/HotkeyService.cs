@@ -14,7 +14,7 @@ public sealed class HotkeyService : IDisposable
     private static readonly TimeSpan ReleasePollInterval = TimeSpan.FromMilliseconds(20);
 
     private readonly HWND _hwnd;
-    private readonly Dictionary<int, Shortcut> _registered = [];
+    private readonly Dictionary<int, (Shortcut Shortcut, bool Repeat)> _registered = [];
     private readonly HashSet<int> _held = [];
     private readonly DispatcherQueueTimer _releasePoll;
     private int _nextId = 1;
@@ -29,8 +29,7 @@ public sealed class HotkeyService : IDisposable
     }
 
     /// <summary>
-    /// 押されたとき。第 2 引数はキーリピートによる 2 回目以降の通知か。
-    /// キーリピートの通知も上に渡すので、1 回だけ実行したい対象は isRepeat が true のものを無視する。
+    /// 押されたとき。第 2 引数はキーリピートによる 2 回目以降の通知か（repeat を指定して登録したものだけが true になりうる）。
     /// </summary>
     public event Action<int, bool>? Pressed;
 
@@ -38,12 +37,16 @@ public sealed class HotkeyService : IDisposable
     public event Action<int>? Released;
 
     /// <summary>登録する。成功すれば ID、他のアプリとの衝突や Windows の予約で失敗すれば null。</summary>
-    public int? Register(Shortcut shortcut)
+    /// <param name="repeat">
+    /// キーリピートの通知も受け取るか。受け取らない（既定）なら MOD_NOREPEAT を付け、届く通知はすべて新しく押されたものになる
+    /// （離したことを検出する前に押し直されても、取りこぼさない）。
+    /// </param>
+    public int? Register(Shortcut shortcut, bool repeat = false)
     {
         var id = _nextId++;
-        // MOD_NOREPEAT は付けない（押しっぱなしの間の通知を Adjustment で使う）
-        if (!PInvoke.RegisterHotKey(_hwnd, id, (HOT_KEY_MODIFIERS)shortcut.Modifiers, (uint)shortcut.Key)) return null;
-        _registered[id] = shortcut;
+        var modifiers = (HOT_KEY_MODIFIERS)shortcut.Modifiers | (repeat ? 0 : HOT_KEY_MODIFIERS.MOD_NOREPEAT);
+        if (!PInvoke.RegisterHotKey(_hwnd, id, modifiers, (uint)shortcut.Key)) return null;
+        _registered[id] = (shortcut, repeat);
         return id;
     }
 
@@ -59,9 +62,10 @@ public sealed class HotkeyService : IDisposable
 
     private void OnMessage(uint msg, nuint wParam, nint lParam)
     {
-        if (msg != PInvoke.WM_HOTKEY || !_registered.ContainsKey((int)wParam)) return;
+        if (msg != PInvoke.WM_HOTKEY || !_registered.TryGetValue((int)wParam, out var r)) return;
         var id = (int)wParam;
-        var isRepeat = !_held.Add(id);
+        // MOD_NOREPEAT で登録したものは、押しっぱなしの間に届くことはないので常に新しく押されたもの
+        var isRepeat = !_held.Add(id) && r.Repeat;
         if (!isRepeat) _releasePoll.Start();
         Pressed?.Invoke(id, isRepeat);
     }
@@ -71,7 +75,7 @@ public sealed class HotkeyService : IDisposable
         foreach (var id in _held.ToList())
         {
             // 修飾キーではなく、主となるキーが離されたかで判定する
-            if (_registered.TryGetValue(id, out var s) && (PInvoke.GetAsyncKeyState(s.Key) & 0x8000) != 0) continue;
+            if (_registered.TryGetValue(id, out var r) && (PInvoke.GetAsyncKeyState(r.Shortcut.Key) & 0x8000) != 0) continue;
             _held.Remove(id);
             Released?.Invoke(id);
         }

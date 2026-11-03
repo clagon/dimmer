@@ -7,7 +7,8 @@ namespace Dimmer.Shortcuts;
 /// <param name="Shortcut">設定ファイルに書かれた文字列（例: Ctrl+Alt+B）</param>
 /// <param name="OnPressed">押されたとき。引数はキーリピートによる通知か</param>
 /// <param name="OnReleased">離されたとき</param>
-public sealed record ShortcutTarget(string Name, string Shortcut, Action<bool> OnPressed, Action? OnReleased = null);
+/// <param name="Repeat">キーリピートの通知も受け取るか（受け取らなければ、押すたびに 1 回だけ通知される）</param>
+public sealed record ShortcutTarget(string Name, string Shortcut, Action<bool> OnPressed, Action? OnReleased = null, bool Repeat = false);
 
 /// <summary>登録に失敗した Shortcut（設定画面で警告を出すために保持する）。</summary>
 public sealed record FailedShortcut(string TargetName, string Shortcut, string Reason);
@@ -51,7 +52,7 @@ public sealed class ShortcutBindings
         {
             if (duplicates.Contains(shortcut))
                 failed.Add(new FailedShortcut(target.Name, shortcut.ToString(), Text.Get("ShortcutDuplicate")));
-            else if (_hotkeys.Register(shortcut) is { } id)
+            else if (_hotkeys.Register(shortcut, target.Repeat) is { } id)
                 _targets[id] = target;
             else
                 failed.Add(new FailedShortcut(target.Name, shortcut.ToString(), Text.Get("ShortcutRegisterFailed")));
