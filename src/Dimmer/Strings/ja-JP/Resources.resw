@@ -18,4 +18,44 @@
   <data name="TrayExit" xml:space="preserve">
     <value>終了</value>
   </data>
+  <data name="Setting_Brightness" xml:space="preserve">
+    <value>明るさ</value>
+  </data>
+  <data name="Setting_Contrast" xml:space="preserve">
+    <value>コントラスト</value>
+  </data>
+  <data name="Setting_Volume" xml:space="preserve">
+    <value>音量</value>
+  </data>
+  <data name="Setting_InputSource" xml:space="preserve">
+    <value>入力ソース</value>
+  </data>
+  <data name="Setting_ColorPreset" xml:space="preserve">
+    <value>色温度</value>
+  </data>
+  <data name="Setting_PowerMode" xml:space="preserve">
+    <value>電源状態</value>
+  </data>
+  <data name="Setting_Orientation" xml:space="preserve">
+    <value>向き</value>
+  </data>
+  <data name="ApplyProblemsTitle" xml:space="preserve">
+    <value>「{0}」の一部を適用できませんでした</value>
+  </data>
+  <data name="ApplyMonitorNotFound" xml:space="preserve">
+    <value>{0} が見つからないため、{1} を適用しませんでした</value>
+  </data>
+  <data name="ApplyNotSupported" xml:space="preserve">
+    <value>{0} は {1}（{2}）に対応していません</value>
+  </data>
+  <data name="ApplyFailed" xml:space="preserve">
+    <value>{0} の {1} を設定できませんでした</value>
+  </data>
+  <data name="SettingsLoadFailedTitle" xml:space="preserve">
+    <value>設定ファイルを読み込めませんでした</value>
+  </data>
+  <data name="SettingsLoadFailedBody" xml:space="preserve">
+    <value>空の設定で起動しました。ファイルは上書きしないので、修正してから Dimmer を再起動してください。
+{0}</value>
+  </data>
 </root>
