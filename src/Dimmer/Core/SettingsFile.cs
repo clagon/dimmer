@@ -18,7 +18,8 @@ public sealed class SettingsFile(string path)
         if (!File.Exists(path)) return null;
         try
         {
-            Settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), AppSettings.Json) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), AppSettings.Json);
+            Settings = IsComplete(settings) ? settings! : throw new JsonException("必須の項目が null です");
             return null;
         }
         catch (JsonException e)
@@ -28,6 +29,12 @@ public sealed class SettingsFile(string path)
             return e.Message;
         }
     }
+
+    // 手で書いた JSON の "profiles": null や null の要素は、読み込めても使うときに落ちるので壊れたファイルとして扱う
+    private static bool IsComplete(AppSettings? s) =>
+        s is { Profiles: not null, MonitorNames: not null }
+        && s.Profiles.All(p => p is { Id: not null, Name: not null, Entries: not null } && p.Entries.All(e => e is { Monitor: not null }))
+        && s.MonitorNames.Values.All(v => v is not null);
 
     /// <summary>保存する。読み込んだファイルが壊れていた場合は、元のファイルを残すため何もしない。</summary>
     public void Save()

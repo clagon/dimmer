@@ -63,4 +63,22 @@ public sealed class SettingsFileTests : IDisposable
         file.Save();
         Assert.Equal("{ broken", File.ReadAllText(PathOf));
     }
+
+    [Theory]
+    [InlineData("""{ "profiles": null }""")]
+    [InlineData("""{ "profiles": [ null ] }""")]
+    [InlineData("""{ "profiles": [ { "id": "a", "name": "a", "entries": null } ] }""")]
+    [InlineData("""{ "profiles": [ { "id": "a", "name": "a", "entries": [ null ] } ] }""")]
+    [InlineData("""{ "profiles": [ { "id": null, "name": "a" } ] }""")]
+    [InlineData("""{ "monitorNames": null }""")]
+    [InlineData("null")]
+    public void 必須の項目がnullなら壊れたファイルとして扱う(string json)
+    {
+        File.WriteAllText(PathOf, json);
+        var file = new SettingsFile(PathOf);
+        Assert.NotNull(file.Load());
+        Assert.Empty(file.Settings.Profiles);
+        file.Save();
+        Assert.Equal(json, File.ReadAllText(PathOf));
+    }
 }

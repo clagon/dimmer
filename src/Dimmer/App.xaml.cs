@@ -14,6 +14,7 @@ public partial class App : Application
 {
     private TaskbarIcon? _trayIcon;
     private MessageWindow? _messageWindow;
+    private readonly SemaphoreSlim _applyGate = new(1, 1);
 
     public MonitorService Monitors { get; private set; } = null!;
 
@@ -56,7 +57,11 @@ public partial class App : Application
     /// <returns>スキップや失敗の一覧</returns>
     public async Task<List<string>> ApplyProfileAsync(Profile profile)
     {
-        var problems = await ProfileApplier.ApplyAsync(profile, Monitors.Monitors, Settings.Settings.MonitorNames);
+        // 前の Apply の書き込みや再試行が、後から選んだ Profile を上書きしないよう 1 つずつ順に行う
+        await _applyGate.WaitAsync();
+        List<string> problems;
+        try { problems = await ProfileApplier.ApplyAsync(profile, Monitors.Monitors, Settings.Settings.MonitorNames); }
+        finally { _applyGate.Release(); }
         Settings.Settings.LastAppliedProfileId = profile.Id;
         Settings.Save();
         if (problems.Count > 0) Notifier.Show(Text.Format("ApplyProblemsTitle", profile.Name), string.Join("\n", problems));
