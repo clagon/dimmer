@@ -16,6 +16,9 @@ public sealed class MonitorService : IDisposable
     private static readonly TimeSpan SettleDelay = TimeSpan.FromSeconds(2);
 
     private readonly Lock _gate = new();
+    private readonly Lock _refreshGate = new();
+    private readonly List<nint> _retired = [];
+    private int _leases;
     private readonly Timer _debounce;
     private IReadOnlyDictionary<string, string> _userNames = new Dictionary<string, string>();
 
@@ -48,14 +51,50 @@ public sealed class MonitorService : IDisposable
 
     public void Refresh()
     {
-        lock (_gate)
+        lock (_refreshGate)
         {
-            var old = Monitors;
-            Monitors = WithDisplayNames(Enumerate(), _userNames);
-            // ponytail: 古いハンドルは即破棄。操作中の Setting の読み書きと競合したら、その操作が失敗するだけ
-            foreach (var m in old) DestroyPhysicalMonitor(m.PhysicalMonitor);
+            var monitors = Enumerate();
+            lock (_gate)
+            {
+                _retired.AddRange(Monitors.Select(m => m.PhysicalMonitor));
+                Monitors = WithDisplayNames(monitors, _userNames);
+                DestroyRetiredIfUnused();
+            }
         }
         Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// 今の <see cref="Monitors"/> の物理モニターハンドルを使っている間、列挙し直しても破棄されないようにする。
+    /// Apply の途中で Orientation の変更などから列挙し直しが起きても、残りの書き込みを続けられる。
+    /// </summary>
+    public IDisposable Lease()
+    {
+        lock (_gate) _leases++;
+        return new Releaser(this);
+    }
+
+    private sealed class Releaser(MonitorService service) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
+            lock (service._gate)
+            {
+                service._leases--;
+                service.DestroyRetiredIfUnused();
+            }
+        }
+    }
+
+    // _gate の中で呼ぶこと
+    private void DestroyRetiredIfUnused()
+    {
+        if (_leases > 0) return;
+        foreach (var h in _retired) DestroyPhysicalMonitor(h);
+        _retired.Clear();
     }
 
     public void Dispose()

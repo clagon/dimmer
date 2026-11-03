@@ -60,7 +60,12 @@ public partial class App : Application
         // 前の Apply の書き込みや再試行が、後から選んだ Profile を上書きしないよう 1 つずつ順に行う
         await _applyGate.WaitAsync();
         List<string> problems;
-        try { problems = await ProfileApplier.ApplyAsync(profile, Monitors.Monitors, Settings.Settings.MonitorNames); }
+        try
+        {
+            // Apply 中に列挙し直しが起きても、使っている物理モニターハンドルを破棄させない
+            using var lease = Monitors.Lease();
+            problems = await ProfileApplier.ApplyAsync(profile, Monitors.Monitors, Settings.Settings.MonitorNames);
+        }
         finally { _applyGate.Release(); }
         Settings.Settings.LastAppliedProfileId = profile.Id;
         Settings.Save();
