@@ -8,6 +8,8 @@ public sealed class AppSettings
 {
     public List<Profile> Profiles { get; set; } = [];
 
+    public List<ProfileCycle> Cycles { get; set; } = [];
+
     /// <summary>ユーザーが付けた Monitor Name（特定キー → 名前）。</summary>
     public Dictionary<string, string> MonitorNames { get; set; } = [];
 
@@ -37,6 +39,19 @@ public sealed class Profile
     public List<ProfileEntry> Entries { get; set; } = [];
 
     /// <summary>割り当てた Shortcut（例: Ctrl+Alt+B）。無ければ null。</summary>
+    public string? Shortcut { get; set; }
+}
+
+/// <summary>名前付きの、2 つ以上の Profile を重複なく並べたもの。Shortcut を押すたびに次の Profile を Apply する。</summary>
+public sealed class ProfileCycle
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Name { get; set; } = "";
+
+    /// <summary>並べた Profile の ID。</summary>
+    public List<string> ProfileIds { get; set; } = [];
+
+    /// <summary>割り当てた Shortcut（例: Ctrl+Alt+C）。無ければ null。</summary>
     public string? Shortcut { get; set; }
 }
 
