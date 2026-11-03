@@ -17,6 +17,8 @@ public static class Program
             // 既に常駐しているインスタンスへ起動を渡して終了する。
             // STA スレッドで待つとデッドロックしうるため、別スレッドで待つ。
             var args = AppInstance.GetCurrent().GetActivatedEventArgs();
+            // 1 つ目が設定画面を前面に出せるよう、前面に出す権利を渡す
+            Windows.Win32.PInvoke.AllowSetForegroundWindow(mainInstance.ProcessId);
             Task.Run(() => mainInstance.RedirectActivationToAsync(args).AsTask()).Wait();
             return;
         }
