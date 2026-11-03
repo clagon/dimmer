@@ -31,8 +31,10 @@ public sealed class AdjustmentRunner(
     public void Press(Adjustment adjustment)
     {
         _session?.Release();
+        // 前のセッションの読み書きが終わってから現在値を読む（続けて押したとき、同じ現在値から増減しないように）
+        var previous = _session?.Completion ?? Task.CompletedTask;
         _session = new Session(this, adjustment);
-        _ = _session.StartAsync();
+        _session.Completion = _session.StartAsync(previous);
     }
 
     public void Release(Adjustment adjustment)
@@ -51,6 +53,9 @@ public sealed class AdjustmentRunner(
     private sealed class Session(AdjustmentRunner runner, Adjustment adjustment)
     {
         private readonly Stopwatch _held = Stopwatch.StartNew();
+        // Cursor Monitor は押した瞬間のカーソルの位置で決める（列挙や前の操作を待つ間にカーソルが動いても変えない）
+        private readonly string _cursorGdi = CursorMonitor.GdiName();
+        private readonly nint _cursorHandle = CursorMonitor.Handle();
         private readonly List<string> _failed = [];
         private DispatcherQueueTimer? _timer;
         private TimeSpan? _releasedAt;
@@ -61,12 +66,17 @@ public sealed class AdjustmentRunner(
 
         public Adjustment Adjustment => adjustment;
 
-        public async Task StartAsync()
+        /// <summary>このセッションの読み書きがすべて終わったら完了する。</summary>
+        public Task Completion { get; set; } = Task.CompletedTask;
+
+        public async Task StartAsync(Task previous)
         {
             var lease = runner._monitors.Lease();
             try
             {
                 await runner._monitors.Ready;
+                try { await previous; }
+                catch (Exception e) { Log.Write($"Previous adjustment failed: {e.Message}"); }
                 var (selected, shown) = Resolve();
                 if (selected is null) return;
 
@@ -139,13 +149,13 @@ public sealed class AdjustmentRunner(
         {
             var all = runner._monitors.Monitors;
             var setting = adjustment.Setting;
-            var cursorGdi = CursorMonitor.GdiName();
+            var cursorGdi = _cursorGdi;
             var cursor = all.FirstOrDefault(m => m.GdiDeviceName == cursorGdi);
 
             if (adjustment.Target == Adjustment.AllMonitors)
             {
                 // 全 Monitor が対象のときは、対応していない Monitor を黙ってスキップする。Overlay は Cursor Monitor に 1 つだけ出す
-                _overlayMonitor = CursorMonitor.Handle();
+                _overlayMonitor = _cursorHandle;
                 var supported = all.Where(m => m.Settings.ContainsKey(setting)).ToList();
                 if (supported.Count == 0) { Show(Text.Format("OverlayNoMonitorSupports", Text.Setting(setting))); return (null, null); }
                 return (supported, cursor);
@@ -154,7 +164,7 @@ public sealed class AdjustmentRunner(
             var target = adjustment.Target == Adjustment.CursorMonitor ? cursor : all.FirstOrDefault(m => m.Key == adjustment.Target);
             if (target is null)
             {
-                _overlayMonitor = CursorMonitor.Handle();
+                _overlayMonitor = _cursorHandle;
                 var name = runner._monitorNames().GetValueOrDefault(adjustment.Target) ?? adjustment.Target;
                 Show(Text.Format("OverlayMonitorNotFound", adjustment.Target == Adjustment.CursorMonitor ? Text.Get("CursorMonitor") : name));
                 return (null, null);
