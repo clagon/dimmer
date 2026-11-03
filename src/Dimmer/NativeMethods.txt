@@ -21,3 +21,7 @@ SetVCPFeature
 EnumDisplaySettings
 ChangeDisplaySettingsEx
 DEVMODEW
+RegisterHotKey
+UnregisterHotKey
+GetAsyncKeyState
+WM_HOTKEY

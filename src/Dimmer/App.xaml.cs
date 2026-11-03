@@ -1,6 +1,7 @@
 using Dimmer.Core;
 using Dimmer.Monitors;
 using Dimmer.Profiles;
+using Dimmer.Shortcuts;
 using H.NotifyIcon;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -17,6 +18,10 @@ public partial class App : Application
     private readonly SemaphoreSlim _applyGate = new(1, 1);
 
     public MonitorService Monitors { get; private set; } = null!;
+
+    public ShortcutBindings Shortcuts { get; private set; } = null!;
+
+    private HotkeyService? _hotkeys;
 
     public SettingsFile Settings { get; } = new(Path.Combine(ApplicationData.Current.LocalFolder.Path, "settings.json"));
 
@@ -51,12 +56,28 @@ public partial class App : Application
                     $"settings=[{string.Join(", ", m.Settings.Select(s => s.Value.Count == 0 ? $"{s.Key}" : $"{s.Key}({string.Join("/", s.Value.Select(v => Vcp.ValueName(s.Key, v)))})"))}]");
         };
         Task.Run(Monitors.Refresh);
+
+        _hotkeys = new HotkeyService(_messageWindow);
+        Shortcuts = new ShortcutBindings(_hotkeys);
+        var failed = BindShortcuts();
+        if (failed.Count > 0)
+            Notifier.Show(Text.Get("ShortcutFailedTitle"),
+                string.Join("\n", failed.Select(f => Text.Format("ShortcutFailedLine", f.TargetName, f.Shortcut, f.Reason))));
     }
+
+    /// <summary>設定ファイルの Shortcut を登録し直す。登録できなかったものを返す。</summary>
+    public IReadOnlyList<FailedShortcut> BindShortcuts() =>
+        Shortcuts.Bind(Settings.Settings.Profiles.Select(p => new ShortcutTarget(p.Name, p.Shortcut ?? "", isRepeat =>
+        {
+            // Profile の Apply はキーリピートを無視し、1 回押すと 1 回だけ実行する
+            if (!isRepeat) _ = ApplyProfileAsync(p);
+        })));
 
     /// <summary>Profile を Apply し、直近に Apply された Profile として保存する。スキップや失敗があればトーストで知らせる。</summary>
     /// <returns>スキップや失敗の一覧</returns>
     public async Task<List<string>> ApplyProfileAsync(Profile profile)
     {
+        Log.Write($"Apply: {profile.Name}");
         // 前の Apply の書き込みや再試行が、後から選んだ Profile を上書きしないよう 1 つずつ順に行う
         await Monitors.Ready;
         await _applyGate.WaitAsync();
@@ -105,6 +126,7 @@ public partial class App : Application
     private void ExitApp()
     {
         _trayIcon?.Dispose();
+        _hotkeys?.Dispose();
         Monitors.Dispose();
         _messageWindow?.Dispose();
         Exit();

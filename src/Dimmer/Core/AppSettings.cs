@@ -32,6 +32,9 @@ public sealed class Profile
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
     public List<ProfileEntry> Entries { get; set; } = [];
+
+    /// <summary>割り当てた Shortcut（例: Ctrl+Alt+B）。無ければ null。</summary>
+    public string? Shortcut { get; set; }
 }
 
 /// <param name="Monitor">Monitor の特定キー</param>
