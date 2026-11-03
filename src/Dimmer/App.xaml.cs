@@ -138,6 +138,15 @@ public partial class App : Application
         return Text.Adjustment(a, names);
     }
 
+    /// <summary>Profile の Apply や Adjustment と順番を守って Monitor を読み書きする（途中の状態を読まないように）。</summary>
+    public async Task<T> RunExclusiveAsync<T>(Func<Task<T>> operation)
+    {
+        await Monitors.Ready;
+        await _applyGate.WaitAsync();
+        try { return await operation(); }
+        finally { _applyGate.Release(); }
+    }
+
     /// <summary>設定画面を開く（開いていれば前面に出す）。</summary>
     public void OpenSettings()
     {

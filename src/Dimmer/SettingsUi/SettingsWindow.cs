@@ -165,9 +165,9 @@ public sealed class SettingsWindow : Window
     }
 
     /// <summary>全 Monitor・全 Setting の現在値を読む。Profile に含めるのは明るさとコントラストだけにしておく。</summary>
-    private async Task<List<ProfileEntry>> ReadCurrentAsync()
+    private Task<List<ProfileEntry>> ReadCurrentAsync() => _app.RunExclusiveAsync(async () =>
     {
-        await _app.Monitors.Ready;
+        // Apply や Adjustment の途中の値を取り込まないよう、それらと順番を守って読む
         using var lease = _app.Monitors.Lease();
         var monitors = _app.Monitors.Monitors;
         return await Task.Run(() =>
@@ -183,7 +183,7 @@ public sealed class SettingsWindow : Window
             }
             return entries;
         });
-    }
+    });
 
     private UIElement EntryRow(Profile profile, int index)
     {
