@@ -38,6 +38,13 @@ public partial class App : Application
         if (Settings.Load() is { } error)
             Notifier.Show(Text.Get("SettingsLoadFailedTitle"), Text.Format("SettingsLoadFailedBody", error));
 
+        // 存在しない Profile は Cycle から取り除き、使えない Cycle を知らせる（Shortcut は登録しない）
+        Cycles.RemoveMissingProfiles(Settings.Settings);
+        var invalidCycles = Settings.Settings.Cycles.Where(c => Cycles.Problem(c) != CycleProblem.None).ToList();
+        if (invalidCycles.Count > 0)
+            Notifier.Show(Text.Get("CycleInvalidTitle"),
+                string.Join("\n", invalidCycles.Select(c => Text.Format("CycleInvalidLine", c.Name, Text.Get($"CycleProblem_{Cycles.Problem(c)}")))));
+
         // ウィンドウは持たず、トレイアイコンだけで常駐する
         _trayIcon = new TaskbarIcon
         {
@@ -69,12 +76,27 @@ public partial class App : Application
     }
 
     /// <summary>設定ファイルの Shortcut を登録し直す。登録できなかったものを返す。</summary>
-    public IReadOnlyList<FailedShortcut> BindShortcuts() =>
-        Shortcuts.Bind(Settings.Settings.Profiles.Select(p => new ShortcutTarget(p.Name, p.Shortcut ?? "", isRepeat =>
+    public IReadOnlyList<FailedShortcut> BindShortcuts()
+    {
+        // Profile の Apply と Profile Cycle はキーリピートを無視し、1 回押すと 1 回だけ実行する
+        var profiles = Settings.Settings.Profiles.Select(p => new ShortcutTarget(p.Name, p.Shortcut ?? "", isRepeat =>
         {
-            // Profile の Apply はキーリピートを無視し、1 回押すと 1 回だけ実行する
             if (!isRepeat) _ = ApplyProfileAsync(p, overlay: true);
-        })));
+        }));
+        var cycles = Settings.Settings.Cycles.Where(c => Cycles.Problem(c) == CycleProblem.None).Select(c => new ShortcutTarget(c.Name, c.Shortcut ?? "", isRepeat =>
+        {
+            if (!isRepeat) _ = ApplyNextInCycleAsync(c);
+        }));
+        return Shortcuts.Bind(profiles.Concat(cycles));
+    }
+
+    /// <summary>Profile Cycle の次の Profile を Apply し、Overlay に Profile 名と並びの中の位置（例: 2/3）を出す。</summary>
+    public Task<List<string>> ApplyNextInCycleAsync(ProfileCycle cycle)
+    {
+        var i = Cycles.NextIndex(cycle.ProfileIds, Settings.Settings.LastAppliedProfileId);
+        var profile = Settings.Settings.Profiles.First(p => p.Id == cycle.ProfileIds[i]);
+        return ApplyProfileAsync(profile, overlay: true, position: $"{i + 1}/{cycle.ProfileIds.Count}");
+    }
 
     /// <summary>Profile を Apply し、直近に Apply された Profile として保存する。スキップや失敗があればトーストで知らせる。</summary>
     /// <param name="overlay">Overlay に Profile 名を出すか（Shortcut から実行したとき）</param>
@@ -83,6 +105,8 @@ public partial class App : Application
     public async Task<List<string>> ApplyProfileAsync(Profile profile, bool overlay = false, string? position = null)
     {
         Log.Write($"Apply: {profile.Name}");
+        // 前の Apply が終わる前に Cycle の Shortcut が押されても次へ進むよう、待つ前に「直近」として記録する
+        Settings.Settings.LastAppliedProfileId = profile.Id;
         // Overlay は共有なので、後から実行した Shortcut の表示を古い Apply の結果で上書きしないよう、最新の要求だけが更新する
         var overlayRequest = overlay ? ++_overlayRequest : 0;
         if (overlay) ShowOverlay(profile.Name, position);
@@ -98,7 +122,6 @@ public partial class App : Application
             problems = await ProfileApplier.ApplyAsync(profile, Monitors.Monitors, Settings.Settings.MonitorNames);
         }
         finally { _applyGate.Release(); }
-        Settings.Settings.LastAppliedProfileId = profile.Id;
         Settings.Save();
 
         if (problems.Count > 0)

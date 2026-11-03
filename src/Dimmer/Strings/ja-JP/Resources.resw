@@ -76,4 +76,19 @@
   <data name="OverlayPartialFailure" xml:space="preserve">
     <value>一部適用できませんでした</value>
   </data>
+  <data name="CycleInvalidTitle" xml:space="preserve">
+    <value>使えない Profile Cycle があります</value>
+  </data>
+  <data name="CycleInvalidLine" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="CycleProblem_NoName" xml:space="preserve">
+    <value>名前がありません</value>
+  </data>
+  <data name="CycleProblem_TooFewProfiles" xml:space="preserve">
+    <value>Profile が 2 つ以上必要です</value>
+  </data>
+  <data name="CycleProblem_DuplicateProfiles" xml:space="preserve">
+    <value>同じ Profile が重複しています</value>
+  </data>
 </root>

@@ -33,7 +33,8 @@ public sealed class SettingsFile(string path)
 
     // 手で書いた JSON の "profiles": null や null の要素は、読み込めても使うときに落ちるので壊れたファイルとして扱う
     private static bool IsComplete(AppSettings? s) =>
-        s is { Profiles: not null, MonitorNames: not null }
+        s is { Profiles: not null, MonitorNames: not null, Cycles: not null }
+        && s.Cycles.All(c => c is { Id: not null, Name: not null, ProfileIds: not null } && c.ProfileIds.All(id => id is not null))
         && s.Profiles.All(p => p is { Id: not null, Name: not null, Entries: not null } && p.Entries.All(e => e is { Monitor: not null }))
         && s.MonitorNames.Values.All(v => v is not null);
 
